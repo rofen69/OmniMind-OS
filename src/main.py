@@ -9,7 +9,10 @@ def main():
     planner = Planner()
     registry = AgentRegistry()
 
-    orchestrator = Orchestrator(planner, registry)
+    orchestrator = Orchestrator(
+        planner=planner,
+        registry=registry,
+    )
 
     user_input = "research solar cold storage in Bangladesh"
 
@@ -18,9 +21,6 @@ def main():
     print("\n📦 Final Output:\n")
     print(result)
 
-    print("\n🔍 DEBUG CHECK:")
-    print("Plan type:", type(result["plan"]))
-    print("First step type:", type(result["plan"][0]) if result["plan"] else None)
 
 if __name__ == "__main__":
     main()
