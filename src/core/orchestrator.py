@@ -1,4 +1,5 @@
 from src.core.guardrails import Guardrails
+from src.memory.memory import Memory
 
 
 class Orchestrator:
@@ -10,10 +11,13 @@ class Orchestrator:
         self.planner = planner
         self.registry = registry
         self.guardrails = Guardrails()
+        self.memory = Memory()
 
     def run(self, user_input: str):
         if not self.guardrails.validate_input(user_input):
             return {"error": "Blocked by guardrails."}
+
+        self.memory.store("last_user_input", user_input)
 
         plan = self.planner.create_plan(user_input)
 
