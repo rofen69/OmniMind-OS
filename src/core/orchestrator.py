@@ -1,54 +1,89 @@
 from src.core.guardrails import Guardrails
-from src.memory.memory import Memory
+
+from src.discovery.selector import AgentSelector
+from src.shared.preferences import UserPreferences
 
 
 class Orchestrator:
     """
-    Coordinates planning, agent execution, and tool execution.
+    OmniMind Execution Engine
+
+    Flow:
+    User Input
+        ↓
+    Planner (Capability Plan)
+        ↓
+    Discovery (Agent Candidates)
+        ↓
+    Selection (Best Agent)
+        ↓
+    Execution (Agent Output)
     """
 
     def __init__(self, planner, registry):
         self.planner = planner
         self.registry = registry
+
         self.guardrails = Guardrails()
-        self.memory = Memory()
+        self.selector = AgentSelector()
+        self.preferences = UserPreferences()
 
     def run(self, user_input: str):
-        if not self.guardrails.validate_input(user_input):
-            return {"error": "Blocked by guardrails."}
 
-        self.memory.store("last_user_input", user_input)
+        if not self.guardrails.validate_input(user_input):
+            return {"error": "Blocked by guardrails"}
 
         plan = self.planner.create_plan(user_input)
 
+        discovered = {}
+        selected = {}
+        timeline = []
         results = []
 
         for step in plan.steps:
 
-            if step.agent.startswith("tool:"):
-                tool_name = step.agent.split(":", 1)[1]
-                tool = self.registry.get_tool(tool_name)
+            capability = step.capability
 
-                if tool is None:
-                    results.append(
-                        {
-                            "error": f"Tool '{tool_name}' is not registered."
-                        }
-                    )
-                    continue
+            # 1. DISCOVER
+            candidates = self.registry.discover_capability(capability)
 
+            discovered[capability] = [
+                {
+                    "name": a.name,
+                    "source": a.source,
+                    "installed": getattr(a, "installed", False),
+                    "cost": a.cost,
+                    "license": a.license,
+                    "score": a.score,
+                    "limitations": a.limitations,
+                    "requirements": a.requirements,
+                }
+                for a in candidates
+            ]
+
+            # 2. SELECT BEST AGENT
+            chosen = self.selector.select(candidates, self.preferences)
+
+            if chosen:
+                selected[capability] = {
+                    "name": chosen.name,
+                    "source": chosen.source,
+                    "score": chosen.score,
+                }
+
+                timeline.append({
+                    "capability": capability,
+                    "selected_agent": chosen.name,
+                    "source": chosen.source,
+                    "status": "executed"
+                })
+
+            # 3. EXECUTION
+            if capability.startswith("tool:"):
+                tool = self.registry.get_tool(capability.split(":")[1])
                 result = tool.execute(step.task)
-
             else:
-                if not self.registry.has_agent(step.agent):
-                    results.append(
-                        {
-                            "error": f"Agent '{step.agent}' is not registered."
-                        }
-                    )
-                    continue
-
-                agent = self.registry.get_agent(step.agent)
+                agent = self.registry.get_agent("research")
                 result = agent.execute(step.task)
 
             results.append(result)
@@ -57,10 +92,13 @@ class Orchestrator:
             "input": user_input,
             "plan": [
                 {
-                    "agent": step.agent,
-                    "task": step.task,
+                    "capability": s.capability,
+                    "task": s.task,
                 }
-                for step in plan.steps
+                for s in plan.steps
             ],
+            "candidate_agents": discovered,
+            "selected_agents": selected,
+            "timeline": timeline,
             "results": results,
         }

@@ -4,7 +4,7 @@ from typing import List
 
 @dataclass
 class Step:
-    agent: str
+    capability: str
     task: str
 
 
