@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniMind OS Kernel Interface</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: rgba(22, 27, 34, 0.7);
+            --border-color: rgba(48, 54, 61, 0.8);
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-color: #58a6ff;
+            --success-color: #2ea043;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(90deg, #58a6ff, #a371f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 8px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        /* Task Box */
+        .task-box-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: rgba(13, 17, 23, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+
+        button {
+            background: var(--accent-color);
+            color: #ffffff;
+            border: none;
+            padding: 0 24px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #318bf8;
+        }
+
+        button:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Live Log Terminal */
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        .terminal-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+            animation: pulse-anim 1.5s infinite;
+        }
+
+        @keyframes pulse-anim {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .terminal-box {
+            background: #000000;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: #7ee787;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            word-wrap: break-word;
+        }
+        .log-info { color: #a5d6ff; }
+        .log-error { color: #ff7b72; }
+        .log-warning { color: #f2cc60; }
+
+        /* Execution Results */
+        .results-panel {
+            display: none; /* hidden initially */
+        }
+
+        .plan-step {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(13, 17, 23, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .step-cap {
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 12px;
+            font-family: var(--font-mono);
+        }
+
+        .step-agent {
+            margin-left: auto;
+            color: var(--success-color);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .result-output {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(13, 17, 23, 0.8);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-family: var(--font-main);
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>OmniMind OS</h1>
+            <p>Agentic Capability-Based Execution Engine</p>
+        </div>
+
+        <!-- Task Input -->
+        <div class="panel">
+            <form id="task-form" class="task-box-wrapper">
+                <input type="text" id="task-input" placeholder="Enter a task (e.g. 'Research quantum computing and save as document')" autocomplete="off" required>
+                <button type="submit" id="submit-btn">Execute</button>
+            </form>
+        </div>
+
+        <!-- Live Log Terminal -->
+        <div class="panel">
+            <div class="terminal-header">
+                <h3>Live System Logs</h3>
+                <span id="pulse-indicator" class="pulse" style="display: none;"></span>
+            </div>
+            <div class="terminal-box" id="terminal-box">
+                <div class="log-entry" style="color: var(--text-secondary)">Awaiting instructions...</div>
+            </div>
+        </div>
+
+        <!-- Trace Results -->
+        <div class="panel results-panel" id="results-panel">
+            <div class="terminal-header" style="margin-bottom: 16px;">
+                <h3>Execution Trace</h3>
+            </div>
+            <div id="plan-container"></div>
+            
+            <h4 style="margin-top: 24px; margin-bottom: 12px; color: var(--text-secondary);">FINAL OUTPUT</h4>
+            <div id="final-output" class="result-output"></div>
+        </div>
+    </div>
+
+    <script>
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const terminalBox = document.getElementById('terminal-box');
+        const pulseIndicator = document.getElementById('pulse-indicator');
+        const resultsPanel = document.getElementById('results-panel');
+        const planContainer = document.getElementById('plan-container');
+        const finalOutput = document.getElementById('final-output');
+
+        let logPollingInterval = null;
+
+        function appendLog(msg) {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            if (msg.includes('ERROR') || msg.includes('failed')) {
+                div.classList.add('log-error');
+            } else if (msg.includes('WARNING')) {
+                div.classList.add('log-warning');
+            } else if (msg.includes('INFO')) {
+                div.classList.add('log-info');
+            }
+            div.textContent = msg;
+            terminalBox.appendChild(div);
+            terminalBox.scrollTop = terminalBox.scrollHeight;
+        }
+
+        async function pollLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                
+                if (data.logs && data.logs.length > 0) {
+                    terminalBox.innerHTML = ''; // Clear and re-render full history
+                    data.logs.forEach(log => appendLog(log));
+                }
+            } catch (e) {
+                console.error("Log polling failed", e);
+            }
+        }
+
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const task = taskInput.value.trim();
+            if (!task) return;
+
+            // Reset UI
+            taskInput.disabled = true;
+            submitBtn.disabled = true;
+            terminalBox.innerHTML = '';
+            resultsPanel.style.display = 'none';
+            planContainer.innerHTML = '';
+            finalOutput.innerHTML = '';
+            pulseIndicator.style.display = 'inline-block';
+
+            appendLog(`[SYSTEM] Initializing task: "${task}"`);
+            appendLog(`[SYSTEM] Handing off to Orchestrator engine...`);
+
+            // Start polling logs every 500ms
+            logPollingInterval = setInterval(pollLogs, 500);
+
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task })
+                });
+                
+                const result = await response.json();
+                
+                // Final log sync
+                await pollLogs();
+                clearInterval(logPollingInterval);
+                pulseIndicator.style.display = 'none';
+                
+                if (result.error) {
+                    appendLog(`[SYSTEM ERROR] ${result.error}`);
+                } else {
+                    appendLog(`[SYSTEM] Execution complete. Disconnecting log stream.`);
+                    renderResults(result);
+                }
+
+            } catch (error) {
+                clearInterval(logPollingInterval);
+                pulseIndicator.style.display = 'none';
+                appendLog(`[SYSTEM ERROR] Failed to connect to core engine: ${error.message}`);
+            } finally {
+                taskInput.disabled = false;
+                submitBtn.disabled = false;
+                taskInput.focus();
+            }
+        });
+
+        function renderResults(result) {
+            resultsPanel.style.display = 'block';
+            
+            // Render Plan + Timeline
+            const plan = result.plan || [];
+            const timeline = result.timeline || [];
+            
+            plan.forEach((step, idx) => {
+                const trace = timeline[idx] || {};
+                
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'plan-step';
+                
+                const capSpan = document.createElement('span');
+                capSpan.className = 'step-cap';
+                capSpan.textContent = step.capability;
+                
+                const taskSpan = document.createElement('span');
+                taskSpan.textContent = step.task;
+                
+                const agentSpan = document.createElement('span');
+                agentSpan.className = 'step-agent';
+                
+                if (trace.status === 'executed') {
+                    agentSpan.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+                        </svg>
+                        ${trace.selected_agent} (${trace.source})
+                    `;
+                } else {
+                    agentSpan.style.color = '#ff7b72';
+                    agentSpan.textContent = `FAILED`;
+                }
+                
+                stepDiv.appendChild(capSpan);
+                stepDiv.appendChild(taskSpan);
+                stepDiv.appendChild(agentSpan);
+                
+                planContainer.appendChild(stepDiv);
+            });
+            
+            // Render Final Output from last step
+            const resultsList = result.results || [];
+            if (resultsList.length > 0) {
+                const finalResult = resultsList[resultsList.length - 1];
+                if (finalResult.output) {
+                    finalOutput.textContent = finalResult.output;
+                } else if (finalResult.error) {
+                    finalOutput.textContent = "Error: " + finalResult.error;
+                } else {
+                    finalOutput.textContent = JSON.stringify(finalResult, null, 2);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

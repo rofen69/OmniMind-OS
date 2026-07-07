@@ -1,3 +1,10 @@
+"""
+Resolver Module
+
+Simulates capability resolution across multiple sources.
+"""
+from typing import List
+
 from src.shared.agent_metadata import AgentMetadata
 
 
@@ -13,12 +20,10 @@ class CapabilityResolver:
     - ADK
     """
 
-    def __init__(self):
-
+    def __init__(self) -> None:
+        """Initialize the resolver with a static catalog of capabilities."""
         self.catalog = {
-
             "research": [
-
                 AgentMetadata(
                     name="LocalResearchAgent",
                     version="1.0",
@@ -32,7 +37,6 @@ class CapabilityResolver:
                     requirements=[],
                     installation="Built-in",
                 ),
-
                 AgentMetadata(
                     name="GitHubResearchAgent",
                     version="1.0",
@@ -46,7 +50,6 @@ class CapabilityResolver:
                     requirements=["Internet"],
                     installation="Git Clone",
                 ),
-
                 AgentMetadata(
                     name="HFResearchAgent",
                     version="1.0",
@@ -60,9 +63,62 @@ class CapabilityResolver:
                     requirements=["API Token"],
                     installation="Remote",
                 )
+            ],
+            "file": [
+                AgentMetadata(
+                    name="FileAgent",
+                    version="1.0",
+                    source="Local",
+                    capability="file",
+                    cost="Free",
+                    latency="Fast",
+                    license="Internal",
+                    score=1.0,
+                    limitations=["Local file system only"],
+                    requirements=[],
+                    installation="Built-in",
+                )
+            ],
+            "documentation": [
+                AgentMetadata(
+                    name="DocumentationAgent",
+                    version="1.0",
+                    source="Local",
+                    capability="documentation",
+                    cost="Free",
+                    latency="Fast",
+                    license="Internal",
+                    score=1.0,
+                    limitations=["Markdown only"],
+                    requirements=[],
+                    installation="Built-in",
+                )
+            ],
+            "evaluation": [
+                AgentMetadata(
+                    name="evaluation",
+                    version="1.0",
+                    source="Local",
+                    capability="evaluation",
+                    cost="Free",
+                    latency="Fast",
+                    license="Internal",
+                    score=1.0,
+                    limitations=["Basic scoring only"],
+                    requirements=[],
+                    installation="Built-in",
+                )
             ]
         }
 
-    def discover(self, capability: str):
+    def discover(self, capability: str) -> List[AgentMetadata]:
+        """
+        Discover agents capable of satisfying the request.
 
+        Args:
+            capability (str): The requested capability.
+
+        Returns:
+            List[AgentMetadata]: List of metadata for available agents.
+        """
         return self.catalog.get(capability, [])

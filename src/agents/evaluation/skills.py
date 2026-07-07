@@ -8,8 +8,13 @@ Lightweight scoring utilities for OmniMind OS.
 def basic_score(output: str) -> float:
     """
     Compute a simple heuristic score for an output.
-    """
 
+    Args:
+        output (str): The text output to score.
+
+    Returns:
+        float: A computed score between 0.0 and 1.0.
+    """
     if not output:
         return 0.0
 
